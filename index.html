@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Bitso Trading Bot 24/7 · $91 USDC → $1M · Estrategia escalonada México">
+<title>Bitso Bot 24/7 · $91 → $1M</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="shell">
+
+<!-- ══ TOPBAR ══ -->
+<header class="topbar">
+  <div class="logo">BITSO BOT <span>// $91 → $1M · MX</span></div>
+  <div class="tb-mid">
+    <div>
+      <span class="live-price up" id="tbPrice">$1.4700</span>
+      <span class="pct up" id="tbPct">+0.00%</span>
+      <span style="font-family:var(--mono);font-size:9px;color:var(--muted2);margin-left:6px">XRP/USDC</span>
+    </div>
+    <span style="color:var(--muted);font-size:10px">|</span>
+    <span id="tbBTC" style="font-family:var(--mono);font-size:11px;color:var(--a)">BTC $84,200</span>
+  </div>
+  <div class="tb-right">
+    <div class="status-dot on" id="botDot"></div>
+    <span class="status-txt" id="botTxt">BOT 24/7 ACTIVO</span>
+    <button class="btn btn-o" id="btnToggle" onclick="BOT.toggle()">⏸ PAUSAR</button>
+    <button class="btn btn-g" onclick="UI.showTab('config')">⚙ API KEY</button>
+  </div>
+</header>
+
+<!-- ══ TABS ══ -->
+<div class="tabs">
+  <div class="tab active" id="tab-dashboard" onclick="UI.showTab('dashboard')">DASHBOARD</div>
+  <div class="tab" id="tab-bot"       onclick="UI.showTab('bot')">BOT ENGINE</div>
+  <div class="tab" id="tab-trades"    onclick="UI.showTab('trades')">OPERACIONES</div>
+  <div class="tab" id="tab-meta"      onclick="UI.showTab('meta')">META $1M</div>
+  <div class="tab" id="tab-plan"      onclick="UI.showTab('plan')">PLAN 5 FASES</div>
+  <div class="tab" id="tab-config"    onclick="UI.showTab('config')">API BITSO</div>
+</div>
+
+<main class="main">
+
+<!-- ══════════════════ DASHBOARD ══════════════════ -->
+<div class="page active" id="page-dashboard">
+
+  <div class="mg">
+    <div class="mi"><div class="ml">Capital USDC</div><div class="mv up" id="d-cap">$91.00</div><div class="ms">inicio $91.00</div></div>
+    <div class="mi"><div class="ml">P&L Total</div><div class="mv" id="d-pnl">+$0.00</div><div class="ms" id="d-pnlpct">+0.00%</div></div>
+    <div class="mi"><div class="ml">Operaciones</div><div class="mv" style="color:var(--bl)" id="d-ops">0</div><div class="ms" id="d-wr">Win rate: —</div></div>
+    <div class="mi"><div class="ml">Progreso Meta</div><div class="mv" style="color:var(--pu)" id="d-prog">0.0091%</div><div class="ms">de $1,000,000</div></div>
+    <div class="mi"><div class="ml">Próximo Hito</div><div class="mv" style="color:var(--a)" id="d-next">$182</div><div class="ms">×2 capital</div></div>
+  </div>
+
+  <!-- Goal bar -->
+  <div class="card">
+    <div class="ch">
+      <div class="ct">Progreso hacia $1,000,000</div>
+      <span class="badge bp" id="phaseLabel">FASE 1 · SEMILLA</span>
+    </div>
+    <div class="cb">
+      <div class="flex-between" style="margin-bottom:6px">
+        <span style="font-family:var(--mono);font-size:11px;color:var(--muted2)">$91</span>
+        <span style="font-family:var(--mono);font-size:11px;color:var(--g)" id="goalPct">0.0091%</span>
+        <span style="font-family:var(--mono);font-size:11px;color:var(--a)">$1,000,000</span>
+      </div>
+      <div class="goal-bar-outer"><div class="goal-bar-fill" id="goalBar" style="width:0.001%"></div></div>
+      <div class="goal-milestones">
+        <span class="gm">$182</span><span class="gm">$728</span><span class="gm">$2.9K</span>
+        <span class="gm">$11K</span><span class="gm">$93K</span><span class="gm">$1M</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chart + OB -->
+  <div class="two-col">
+    <div class="card">
+      <div class="ch">
+        <div class="ct">XRP/USDC · Precio en vivo</div>
+        <div class="flex-gap">
+          <span class="badge" id="wsBadge" style="background:rgba(0,204,122,.12);color:var(--g);border:1px solid rgba(0,204,122,.25)">WS LIVE</span>
+          <span class="badge bx">XRP/USDC</span>
+        </div>
+      </div>
+      <div class="cb" style="padding:10px">
+        <div class="chart-wrap"><canvas id="priceCanvas"></canvas></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ch"><div class="ct">Order Book · Top 8</div><span class="badge bg">LIVE</span></div>
+      <div class="ws-status">
+        <div class="ws-dot" id="wsDot" style="background:var(--g)"></div>
+        <span id="wsStatus">Conectando WebSocket · bitso.com...</span>
+      </div>
+      <div class="ob-grid">
+        <div class="ob-side"><div class="ob-hdr" style="color:var(--g)">BIDS</div><div id="bids"></div></div>
+        <div class="ob-side"><div class="ob-hdr" style="color:var(--r)">ASKS</div><div id="asks"></div></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:8px 12px;background:var(--s2);font-family:var(--mono);font-size:10px">
+        <span style="color:var(--muted2)">SPREAD</span><span style="color:var(--a)" id="spreadVal">—</span>
+        <span style="color:var(--muted2)">IMBALANCE</span><span id="imbVal">—</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Live Trade Feed -->
+  <div class="card">
+    <div class="ch">
+      <div class="ct">Operaciones del Bot — en vivo</div>
+      <div class="flex-gap">
+        <div class="status-dot on" style="animation:pulse 1.5s infinite"></div>
+        <span style="font-family:var(--mono);font-size:9px;color:var(--g)">EJECUTANDO</span>
+        <span class="badge bb" id="opCount">0 ops</span>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--b)">
+      <div style="padding:9px 14px;border-right:1px solid var(--b)"><div class="ml">HOY</div><div style="font-family:var(--mono);font-size:15px;font-weight:600;color:var(--g)" id="s-today">+$0.00</div></div>
+      <div style="padding:9px 14px;border-right:1px solid var(--b)"><div class="ml">GANADORAS</div><div style="font-family:var(--mono);font-size:15px;font-weight:600;color:var(--g)" id="s-wins">0</div></div>
+      <div style="padding:9px 14px;border-right:1px solid var(--b)"><div class="ml">PERDEDORAS</div><div style="font-family:var(--mono);font-size:15px;font-weight:600;color:var(--r)" id="s-loss">0</div></div>
+      <div style="padding:9px 14px"><div class="ml">WIN RATE</div><div style="font-family:var(--mono);font-size:15px;font-weight:600;color:var(--a)" id="s-wr">—</div></div>
+    </div>
+    <div class="lh"><div>HORA</div><div>PAR</div><div>DIR</div><div>PRECIO</div><div>USDC</div><div>P&L NETO</div><div>CAPITAL</div><div>ESTRATEGIA</div></div>
+    <div class="log-wrap" id="tradeLog">
+      <div style="padding:20px;text-align:center;font-family:var(--mono);font-size:10px;color:var(--muted2)">Iniciando bot — esperando señales...</div>
+    </div>
+    <div style="padding:10px 14px;border-top:1px solid var(--b);display:flex;gap:8px">
+      <button class="btn btn-xrp btn-full" onclick="BOT.manualOrder('xrp_usdc','BUY',30)">▲ COMPRA XRP $30</button>
+      <button class="btn btn-g btn-full"   onclick="BOT.manualOrder('btc_usdc','BUY',9)">▲ DCA BTC $9</button>
+      <button class="btn" style="background:var(--r);color:#fff;flex:1" onclick="BOT.manualOrder('xrp_usdc','SELL',30)">▼ VENDER XRP</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ BOT ENGINE ══════════════════ -->
+<div class="page" id="page-bot">
+
+  <div class="card">
+    <div class="ch"><div class="ct">Señales Multi-Timeframe · Ensemble</div><span class="badge bg" id="ensembleSignal">CALCULANDO...</span></div>
+    <div class="cb">
+      <div class="sig-grid" id="sigGrid"></div>
+      <div class="divider"></div>
+      <div class="flex-between">
+        <span style="font-size:12px;color:var(--muted2)">El bot opera solo cuando ≥ <strong id="tfReqLabel">3</strong>/4 timeframes coinciden y MOS ≥ <strong id="mosThrLabel">62</strong></span>
+        <span style="font-family:var(--mono);font-size:13px;font-weight:600" id="tfScore">0/4</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <div class="card">
+      <div class="ch"><div class="ct">Indicadores Técnicos</div></div>
+      <div class="cb" id="techPanel"><div style="font-family:var(--mono);font-size:11px;color:var(--muted2)">Calculando...</div></div>
+    </div>
+    <div class="card">
+      <div class="ch"><div class="ct">Motor de Riesgo · Kelly</div></div>
+      <div class="cb">
+        <div id="riskPanel"></div>
+        <div class="divider"></div>
+        <div style="font-size:12px;line-height:2">
+          Win rate real: <span style="font-family:var(--mono);color:var(--g)" id="kellyWR">60%</span><br>
+          Kelly%: <span style="font-family:var(--mono);color:var(--pu)" id="kellyPct">25%</span><br>
+          Posición (¼ Kelly): <span style="font-family:var(--mono);color:var(--g)" id="kellyPos">$5.69</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MOS -->
+  <div class="two-col">
+    <div class="card">
+      <div class="ch"><div class="ct">MOS Score</div><span class="badge bg" id="mosStatusBadge">OPERAR</span></div>
+      <div class="cb" style="text-align:center">
+        <canvas id="mosGauge" width="160" height="90" style="display:block;margin:0 auto"></canvas>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--muted2);margin-top:6px;letter-spacing:2px">MARKET OPPORTUNITY SCORE</div>
+        <div style="margin-top:14px">
+          <div class="mos-row"><div class="mos-row-lbl">Tendencia</div><div class="mos-row-bar"><div class="mos-row-fill" id="mf-tend" style="background:var(--g);width:0%"></div></div><div class="mos-row-val" id="mv-tend">0</div></div>
+          <div class="mos-row"><div class="mos-row-lbl">Liquidez</div><div class="mos-row-bar"><div class="mos-row-fill" id="mf-liq"  style="background:var(--bl);width:0%"></div></div><div class="mos-row-val" id="mv-liq">0</div></div>
+          <div class="mos-row"><div class="mos-row-lbl">Volumen</div><div class="mos-row-bar"><div class="mos-row-fill" id="mf-vol"  style="background:var(--cy);width:0%"></div></div><div class="mos-row-val" id="mv-vol">0</div></div>
+          <div class="mos-row"><div class="mos-row-lbl">Sentimiento</div><div class="mos-row-bar"><div class="mos-row-fill" id="mf-sent" style="background:var(--pu);width:0%"></div></div><div class="mos-row-val" id="mv-sent">0</div></div>
+          <div class="mos-row"><div class="mos-row-lbl">Régimen</div><div class="mos-row-bar"><div class="mos-row-fill" id="mf-reg"  style="background:var(--a);width:0%"></div></div><div class="mos-row-val" id="mv-reg">0</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ch"><div class="ct">Régimen del Mercado</div><span class="badge bg" id="regimeBadge">BULL</span></div>
+      <div class="cb">
+        <div class="regime-display" id="regimeDisplay"></div>
+        <div class="divider"></div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--muted2);letter-spacing:2px;margin-bottom:10px">PARÁMETROS DEL BOT</div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div><div class="fl">MOS MÍNIMO</div><input type="range" min="40" max="90" value="62" id="mosThr" oninput="updateParams()"><div style="font-family:var(--mono);font-size:11px;color:var(--g);margin-top:3px">MOS ≥ <span id="mosThrVal">62</span></div></div>
+          <div><div class="fl">TFs REQUERIDOS</div><input type="range" min="2" max="4" value="3" id="tfReq" oninput="updateParams()"><div style="font-family:var(--mono);font-size:11px;color:var(--a);margin-top:3px"><span id="tfReqVal">3</span>/4 timeframes</div></div>
+          <div><div class="fl">% CAPITAL POR OP</div><input type="range" min="5" max="40" value="15" id="capPct" oninput="updateParams()"><div style="font-family:var(--mono);font-size:11px;color:var(--bl);margin-top:3px"><span id="capPctVal">15</span>%</div></div>
+          <div><div class="fl">STOP LOSS %</div><input type="range" min="1" max="5" step="0.5" value="2.5" id="slPct" oninput="updateParams()"><div style="font-family:var(--mono);font-size:11px;color:var(--r);margin-top:3px">SL = <span id="slPctVal">2.5</span>%</div></div>
+          <div class="flex-gap" style="margin-top:4px">
+            <button class="btn btn-g" onclick="saveParams()" style="flex:1">GUARDAR</button>
+            <span id="paramSaved" style="font-family:var(--mono);font-size:10px;color:var(--g);display:none">✓ Guardado</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ OPERACIONES ══════════════════ -->
+<div class="page" id="page-trades">
+  <div class="mg">
+    <div class="mi"><div class="ml">Total Ops</div><div class="mv" id="t-total">0</div></div>
+    <div class="mi"><div class="ml">Ganadoras</div><div class="mv up" id="t-wins">0</div></div>
+    <div class="mi"><div class="ml">Perdedoras</div><div class="mv" style="color:var(--r)" id="t-losses">0</div></div>
+    <div class="mi"><div class="ml">Profit Factor</div><div class="mv" style="color:var(--a)" id="t-pf">—</div></div>
+    <div class="mi"><div class="ml">Mejor Trade</div><div class="mv up" id="t-best">$0.00</div></div>
+  </div>
+  <div class="card">
+    <div class="ch">
+      <div class="ct">Historial Completo</div>
+      <button class="btn btn-o" style="padding:5px 10px;font-size:9px" onclick="document.getElementById('tradeLog').innerHTML='';document.getElementById('fullLog').innerHTML=''">Limpiar</button>
+    </div>
+    <div class="lh"><div>HORA</div><div>PAR</div><div>DIR</div><div>PRECIO</div><div>USDC</div><div>P&L NETO</div><div>CAPITAL</div><div>ESTRATEGIA</div></div>
+    <div class="log-wrap" style="max-height:500px" id="fullLog"></div>
+  </div>
+</div>
+
+<!-- ══════════════════ META $1M ══════════════════ -->
+<div class="page" id="page-meta">
+  <div class="two-col">
+    <div class="card">
+      <div class="ch"><div class="ct">Hitos hacia $1,000,000</div></div>
+      <div class="cb" style="padding:0">
+        <table class="ms-table">
+          <thead><tr><th>#</th><th>Hito</th><th>Dobladas</th><th>Estado</th></tr></thead>
+          <tbody id="milestonesBody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ch"><div class="ct">Proyección Compuesta</div></div>
+      <div class="cb" id="compoundRows"></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="ch"><div class="ct">Equity Curve · Real vs Proyectado</div><span class="badge bp">LOG SCALE</span></div>
+    <div class="cb" style="padding:10px"><div class="chart-wrap" style="height:240px"><canvas id="equityCanvas"></canvas></div></div>
+  </div>
+  <div class="card">
+    <div class="ch"><div class="ct">Calculadora de Proyección</div></div>
+    <div class="cb">
+      <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px">
+        <div><div class="fl">Capital inicial (USDC)</div><input type="range" id="cCapital" min="50" max="5000" step="10" value="91" oninput="UI.calcProjection()"><div style="font-family:var(--mono);font-size:11px;color:var(--g);margin-top:3px">$<span id="oCapital">91</span></div></div>
+        <div><div class="fl">Rendimiento mensual %</div><input type="range" id="cRend" min="2" max="30" step="1" value="10" oninput="UI.calcProjection()"><div style="font-family:var(--mono);font-size:11px;color:var(--a);margin-top:3px"><span id="oRend">10</span>%</div></div>
+        <div><div class="fl">Meses</div><input type="range" id="cMeses" min="3" max="36" step="1" value="12" oninput="UI.calcProjection()"><div style="font-family:var(--mono);font-size:11px;color:var(--bl);margin-top:3px"><span id="oMeses">12</span> meses</div></div>
+        <div><div class="fl">Aportación mensual (USDC)</div><input type="range" id="cAport" min="0" max="500" step="10" value="50" oninput="UI.calcProjection()"><div style="font-family:var(--mono);font-size:11px;color:var(--cy);margin-top:3px">$<span id="oAport">50</span></div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:4px">
+        <div style="background:var(--s2);border-radius:6px;padding:10px;text-align:center"><div class="ml">CAPITAL FINAL</div><div style="font-family:var(--mono);font-size:18px;font-weight:600;color:var(--g)" id="rFinal">$272</div></div>
+        <div style="background:var(--s2);border-radius:6px;padding:10px;text-align:center"><div class="ml">GANANCIA</div><div style="font-family:var(--mono);font-size:18px;font-weight:600;color:var(--bl)" id="rGanancia">$181</div></div>
+        <div style="background:var(--s2);border-radius:6px;padding:10px;text-align:center"><div class="ml">ROI TOTAL</div><div style="font-family:var(--mono);font-size:18px;font-weight:600;color:var(--a)" id="rROI">199%</div></div>
+      </div>
+      <div id="rPhase" style="margin-top:10px;font-family:var(--mono);font-size:11px;color:var(--muted2);padding:8px 10px;background:var(--s2);border-radius:6px"></div>
+    </div>
+  </div>
+  <div class="warn-box">
+    13.4 dobladas son necesarias de $91 a $1M · Con win rate 60% y ratio 2:1 se proyectan ~14 meses · Reinvirtiendo el 100% de las ganancias sin retiros · Los resultados reales varían según el mercado
+  </div>
+</div>
+
+<!-- ══════════════════ PLAN 5 FASES ══════════════════ -->
+<div class="page" id="page-plan">
+  <div class="card">
+    <div class="ch"><div class="ct">Plan Escalonado · 5 Fases</div><span class="badge bp" id="currentPhaseLabel">FASE 1</span></div>
+    <div class="cb">
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:16px" id="phaseNav"></div>
+      <div id="phaseDetail"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ API BITSO ══════════════════ -->
+<div class="page" id="page-config">
+  <div class="warn-box">
+    ⚠ <strong>Desde GitHub Pages la API de Bitso funciona sin CORS.</strong> Tus keys se guardan en localStorage de tu navegador — nunca se envían a ningún servidor externo. Crea tu key en Bitso con permiso solo de <strong>Trading</strong> (sin retiros).
+  </div>
+  <div class="two-col">
+    <div class="card">
+      <div class="ch">
+        <div class="ct">Credenciales Bitso</div>
+        <div class="flex-gap">
+          <div class="status-dot" id="apiDot" style="background:var(--muted)"></div>
+          <span style="font-family:var(--mono);font-size:9px;color:var(--muted2)" id="apiConnTxt">DESCONECTADO</span>
+        </div>
+      </div>
+      <div class="cb" style="display:flex;flex-direction:column;gap:10px">
+        <div><div class="fl">API Key</div><input type="text" id="apiKey" placeholder="hmac-key-xxxx-xxxx-xxxx" autocomplete="off"></div>
+        <div><div class="fl">API Secret</div><input type="password" id="apiSecret" placeholder="Tu API Secret de Bitso" autocomplete="off"></div>
+        <div class="flex-gap">
+          <button class="btn btn-g" style="flex:1" onclick="API.connect(document.getElementById('apiKey').value.trim(), document.getElementById('apiSecret').value.trim())">⚡ CONECTAR</button>
+          <button class="btn btn-xrp" onclick="API.getTicker('xrp_usdc').then(d=>{if(d.success){const t=d.payload;UI.showApiMsg('✓ XRP/USDC PRECIO REAL\nÚltimo: $'+parseFloat(t.last).toFixed(4)+'\nBid: $'+parseFloat(t.bid).toFixed(4)+'  Ask: $'+parseFloat(t.ask).toFixed(4)+'\nVol 24h: '+parseFloat(t.volume).toFixed(0)+' XRP','success')}})">🔍 TEST</button>
+          <button class="btn btn-o" onclick="API.disconnect()">✕</button>
+        </div>
+        <div id="apiMsg" style="display:none"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ch"><div class="ct">Balance Real</div></div>
+      <div class="cb" id="balancePanel"><div style="font-family:var(--mono);font-size:11px;color:var(--muted2)">Conecta tu API Key para ver tu balance real.</div></div>
+    </div>
+  </div>
+
+  <!-- Colocar orden real -->
+  <div class="card">
+    <div class="ch"><div class="ct">Colocar Orden Real · Bitso</div><span class="badge br">DINERO REAL</span></div>
+    <div class="cb">
+      <div class="four-col" style="margin-bottom:12px">
+        <div><div class="fl">Par</div>
+          <select id="orderBook" onchange="UI.updateOrderPreview()">
+            <option value="xrp_usdc">XRP/USDC</option>
+            <option value="btc_usdc">BTC/USDC</option>
+            <option value="eth_usdc">ETH/USDC</option>
+            <option value="sol_usdc">SOL/USDC</option>
+          </select></div>
+        <div><div class="fl">Dirección</div>
+          <select id="orderSide" onchange="UI.updateOrderPreview()">
+            <option value="buy">▲ COMPRAR</option>
+            <option value="sell">▼ VENDER</option>
+          </select></div>
+        <div><div class="fl">Tipo</div>
+          <select id="orderType" onchange="UI.updateOrderPreview()">
+            <option value="limit">LIMIT (Maker 0.15%)</option>
+            <option value="market">MARKET (Taker 0.19%)</option>
+          </select></div>
+        <div><div class="fl">Monto USDC</div><input type="number" id="orderAmt" value="30" min="5" step="1" oninput="UI.updateOrderPreview()"></div>
+      </div>
+      <div class="two-col" style="margin-bottom:12px">
+        <div><div class="fl">Precio Limit (vacío = mercado)</div><input type="number" id="orderPrice" placeholder="Ej: 1.4400" step="0.0001" oninput="UI.updateOrderPreview()"></div>
+        <div><div class="fl">Stop Loss %</div><input type="number" id="orderSL" value="2.5" step="0.5"></div>
+      </div>
+      <div id="orderPreview" style="background:var(--s2);border:1px solid var(--b);border-radius:6px;padding:10px 14px;font-family:var(--mono);font-size:10px;color:var(--muted2);margin-bottom:12px;white-space:pre-line;line-height:2">
+        Ajusta los parámetros para ver el resumen...
+      </div>
+      <div class="flex-gap">
+        <button class="btn btn-g btn-full" onclick="placeRealOrder()">⚡ ENVIAR ORDEN REAL</button>
+        <button class="btn btn-o" onclick="API.cancelAllOrders().then(d=>UI.showApiMsg(d.success?'✓ Órdenes canceladas':'Error: '+JSON.stringify(d.error),'success'))">✕ Cancelar abiertas</button>
+        <button class="btn btn-o" onclick="API.getOpenOrders(document.getElementById('orderBook').value).then(d=>{if(d.success)UI.renderOpenOrders(d.payload)})">↺ Ver abiertas</button>
+      </div>
+      <div id="orderResult" style="display:none;margin-top:10px;padding:10px 14px;border-radius:6px;font-family:var(--mono);font-size:11px;white-space:pre-line"></div>
+    </div>
+  </div>
+
+  <div class="card" id="openOrdersCard" style="display:none">
+    <div class="ch"><div class="ct">Órdenes Abiertas</div></div>
+    <div class="cb" id="openOrdersList"></div>
+  </div>
+
+  <div style="background:rgba(0,170,228,.07);border:1px solid rgba(0,170,228,.2);border-radius:7px;padding:12px 14px;font-size:12px;color:#80d8f5;line-height:2">
+    <strong>Bitso API desde GitHub Pages:</strong><br>
+    ✓ Sin error CORS — GitHub Pages es un dominio permitido por Bitso<br>
+    ✓ API Key y Secret guardados en localStorage de tu navegador<br>
+    ✓ Firma HMAC-SHA256 calculada en el browser (Web Crypto API nativa)<br>
+    ✓ Precio real via WebSocket público sin autenticación<br>
+    Obtén tu key: <strong>bitso.com → Cuenta → API Keys → Crear → Solo Trading</strong>
+  </div>
+</div>
+
+<!-- Paper trading mini -->
+<div style="display:none">
+  <div id="pp-capital"></div>
+</div>
+
+</main>
+</div><!-- /shell -->
+
+<!-- ══ SCRIPTS ══ -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/bot.js"></script>
+<script>
+// ═══════════════════════════════════════════
+// INICIALIZACIÓN
+// ═══════════════════════════════════════════
+
+// Parámetros del bot
+function updateParams() {
+  STATE.params.mosThr = parseInt(document.getElementById('mosThr').value);
+  STATE.params.tfReq  = parseInt(document.getElementById('tfReq').value);
+  STATE.params.capPct = parseInt(document.getElementById('capPct').value);
+  STATE.params.slPct  = parseFloat(document.getElementById('slPct').value);
+  document.getElementById('mosThrVal').textContent = STATE.params.mosThr;
+  document.getElementById('tfReqVal').textContent  = STATE.params.tfReq;
+  document.getElementById('capPctVal').textContent = STATE.params.capPct;
+  document.getElementById('slPctVal').textContent  = STATE.params.slPct.toFixed(1);
+  document.getElementById('tfReqLabel').textContent = STATE.params.tfReq;
+  document.getElementById('mosThrLabel').textContent = STATE.params.mosThr;
+}
+
+function saveParams() {
+  localStorage.setItem('bb_params', JSON.stringify(STATE.params));
+  const el = document.getElementById('paramSaved');
+  if (el) { el.style.display = 'inline'; setTimeout(() => el.style.display = 'none', 2000); }
+}
+
+// Colocar orden real desde UI
+async function placeRealOrder() {
+  if (!STATE.connected) { UI.showApiMsg('Conecta tu API Key primero.', 'error'); return; }
+  const book  = document.getElementById('orderBook').value;
+  const side  = document.getElementById('orderSide').value;
+  const type  = document.getElementById('orderType').value;
+  const amt   = parseFloat(document.getElementById('orderAmt').value);
+  const price = document.getElementById('orderPrice').value;
+  if (!amt || amt < 1) { UI.showApiMsg('Ingresa un monto válido.', 'error'); return; }
+  const xrpAmt = (amt / (STATE.prices[book]?.last || 1)).toFixed(6);
+  if (!confirm(`¿Confirmar orden REAL?\n\nPar: ${book.toUpperCase()}\nDir: ${side.toUpperCase()}\nTipo: ${type.toUpperCase()}\nCantidad: ${xrpAmt}\nMonto: $${amt} USDC\n\n¡Esta orden usa capital REAL!`)) return;
+
+  const res = await API.placeOrder({ book, side, type, major: xrpAmt, price: price || null });
+  const el  = document.getElementById('orderResult');
+  el.style.display = 'block';
+  if (res.success) {
+    el.textContent = `✓ Orden enviada\nID: ${res.payload.oid}\nEstado: ${res.payload.status}`;
+    el.style.cssText += ';background:rgba(0,204,122,.08);color:#60e8aa;border:1px solid rgba(0,204,122,.25);padding:10px 14px;border-radius:6px;margin-top:10px';
+  } else {
+    el.textContent = `✗ Error: ${res.error?.message || JSON.stringify(res.error)}`;
+    el.style.cssText += ';background:rgba(255,59,80,.08);color:#ff8fa0;border:1px solid rgba(255,59,80,.25);padding:10px 14px;border-radius:6px;margin-top:10px';
+  }
+}
+
+// Plan 5 fases
+function renderPlanPhases() {
+  const phases = [
+    { n:1, title:'Semilla',     range:'$50–$500',     color:'var(--pu)', strat:'DCA + Swing XRP básico', assets:'BTC 50% · XRP 35% · USDC 15%', risk:'Max 2.5% por trade · SL siempre' },
+    { n:2, title:'Arranque',    range:'$500–$2K',      color:'var(--bl)', strat:'EMA 9/21 + RSI Bounce', assets:'BTC 40% · XRP 25% · ETH 20% · USDC 15%', risk:'Kelly ¼ · 3 TFs confirman' },
+    { n:3, title:'Crecimiento', range:'$2K–$15K',      color:'var(--g)',  strat:'Grid Trading + Bollinger', assets:'BTC 35% · ETH 20% · SOL 15% · XRP 15% · USDC 15%', risk:'Drawdown máx -12%/mes' },
+    { n:4, title:'Escala',      range:'$15K–$100K',    color:'var(--a)',  strat:'Bitso Alpha + ETFs + Bot API', assets:'BTC 30% · ETH 20% · Cripto 25% · ETFs 20% · USDC 5%', risk:'Bot automático · SAT obligatorio' },
+    { n:5, title:'Profesional', range:'$100K+',        color:'var(--r)',  strat:'Institucional + Retiro 5-8%/mes', assets:'Portafolio diversificado + staking + ETFs globales', risk:'Contador cripto · CNBV compliance' },
+  ];
+
+  const nav = document.getElementById('phaseNav');
+  if (nav) {
+    nav.innerHTML = phases.map(p => `
+      <button onclick="showPlanPhase(${p.n-1})" id="planBtn${p.n}"
+        style="background:${STATE.phase===p.n?p.color:'var(--s2)'};color:${STATE.phase===p.n?'#000':'var(--muted2)'};
+               border:1px solid ${p.color};border-radius:6px;padding:8px;cursor:pointer;
+               font-family:var(--mono);font-size:9px;letter-spacing:1px;transition:all .15s">
+        F${p.n} · ${p.title}<br>
+        <span style="font-size:8px;opacity:.8">${p.range}</span>
+      </button>`).join('');
+  }
+
+  const detail = document.getElementById('phaseDetail');
+  const ph = phases[STATE.phase - 1] || phases[0];
+  if (detail) {
+    detail.innerHTML = `
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+        <div style="background:var(--s2);border:1px solid ${ph.color};border-radius:7px;padding:14px">
+          <div style="font-family:var(--mono);font-size:8px;color:${ph.color};letter-spacing:2px;margin-bottom:6px">ESTRATEGIAS</div>
+          <div style="font-size:13px">${ph.strat}</div>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--b);border-radius:7px;padding:14px">
+          <div style="font-family:var(--mono);font-size:8px;color:var(--muted2);letter-spacing:2px;margin-bottom:6px">DISTRIBUCIÓN</div>
+          <div style="font-size:12px;line-height:1.8">${ph.assets}</div>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--b);border-radius:7px;padding:14px">
+          <div style="font-family:var(--mono);font-size:8px;color:var(--muted2);letter-spacing:2px;margin-bottom:6px">GESTIÓN RIESGO</div>
+          <div style="font-size:12px;line-height:1.8">${ph.risk}</div>
+        </div>
+      </div>`;
+  }
+}
+
+function showPlanPhase(idx) {
+  renderPlanPhases();
+}
+
+// ═══════ INIT ═══════
+window.addEventListener('load', () => {
+  // Cargar parámetros guardados
+  try {
+    const saved = localStorage.getItem('bb_params');
+    if (saved) Object.assign(STATE.params, JSON.parse(saved));
+    updateParams();
+  } catch(e) {}
+
+  // Inicializar charts
+  CHARTS.initAll();
+
+  // Inicializar UI
+  UI.updateAllMetrics();
+  UI.updateGoal();
+  UI.updateOrderPreview();
+  UI.calcProjection();
+  renderPlanPhases();
+
+  // Conectar WebSocket de Bitso
+  API.connectWS();
+
+  // Cargar precios reales (públicos, sin auth)
+  API.loadAllTickers().then(() => {
+    CHARTS.initPriceChart('priceCanvas', STATE.params.activePair);
+  });
+
+  // Auto-reconectar keys guardadas
+  API.loadSavedKeys();
+
+  // Arrancar bot
+  BOT.start();
+
+  // Seed de operaciones iniciales
+  const seeds = [
+    ['xrp_usdc','BUY','EMA Crossover'],
+    ['btc_usdc','BUY','DCA Semanal'],
+    ['xrp_usdc','SELL','RSI Oversold'],
+    ['xrp_usdc','BUY','BB Squeeze'],
+    ['btc_usdc','BUY','DCA Semanal'],
+    ['xrp_usdc','BUY','MACD Signal'],
+    ['xrp_usdc','SELL','EMA Crossover'],
+    ['xrp_usdc','BUY','Grid Trading'],
+  ];
+  seeds.forEach(([book, dir, strat], i) => {
+    setTimeout(() => BOT.executeTrade(book, dir, strat), i * 120);
+  });
+});
+</script>
+</body>
+</html>
